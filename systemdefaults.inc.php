@@ -127,7 +127,8 @@ $mrbs_company = "Your Company";   // This line must always be uncommented ($mrbs
 // Uncomment this next line to use a logo instead of text for your organisation in the header
 //$mrbs_company_logo = "your_logo.gif";    // name of your logo file.   This example assumes it is in the MRBS directory
 
-// Uncomment this next line for supplementary information after your company name or logo
+// Uncomment this next line for supplementary information after your company name or logo.
+// This can contain HTML, for example if you want to include a link.
 //$mrbs_company_more_info = "You can put additional information here";  // e.g. "XYZ Department"
 
 // Uncomment this next line to have a link to your organisation in the header
@@ -288,6 +289,21 @@ $prevent_simultaneous_bookings = false;
 
 // Set this to true if you want to prevent bookings of a type that is invalid for a room
 $prevent_invalid_types = true;
+
+// The start of the booking day when using periods.  Because MRBS has
+// no notion of when periods actually occur they are assumed to start
+// at the time below when we are enforcing book ahead policies.
+// The setting defines the time of day when bookings open.
+// This should be a in the format hh:mm using the 24 hour clock.
+$periods_booking_opens = '00:00';
+
+// When setting max_create_ahead and max_delete_ahead policies, the time interval is normally
+// measured to the end time of the booking.  This is to prevent users cheating the system by
+// booking a very long slot with the start time just inside the limit and then either not using
+// the early part of the booking, or else editing it down to what they actually need later.
+// However this is not very intuitive for users who might expect the measurement to be relative
+// to the start time, in which case this can be achieved by changing this setting to true.
+$measure_max_to_start_time = false;
 
 /******************
  * Display settings
@@ -620,6 +636,22 @@ $is_mandatory_field['users.display_name'] = true;
 // other people can register.
 $enable_registration = true;
 
+// The default setting for new entries
+$allow_registration_default = false;
+// Whether a limit on the number of registrants is set by default
+$registrant_limit_enabled_default = true;
+// The default maximum number of registrations allowed
+$registrant_limit_default = 1;
+// Whether the registration opens time is enabled by default
+$registration_opens_enabled_default = false;
+// The default time (in seconds) in advance of the start time when registration opens
+$registration_opens_default = 60*60*24*14; // 2 weeks
+// Whether the registration closes time is enabled by default
+$registration_closes_enabled_default = false;
+// The default time (in seconds) in advance of the start time when registration closes
+$registration_closes_default = 0;
+
+
 // Set $skip_default to true if you want the "Skip past conflicts" box
 // on the edit_entry form to be checked by default.  (This will mean that
 // if you make a repeat booking and some of the repeat dates are already
@@ -844,7 +876,9 @@ $auth['db_ext']['password_format'] = 'md5';
 //
 // $ldap_host = array('localhost', 'otherhost.example.com');
 
-// Where is the LDAP server.
+// Where is the LDAP server.   This should ideally consist of a scheme and
+// a host, eg "ldap://foo.com" or "ldaps://bar.com", but just a hostname
+// is supported for backwards compatibility.
 // This can be an array.
 //$ldap_host = "localhost";
 
@@ -1070,6 +1104,16 @@ $auth['allow_local_part_email'] = false;
 // set this variable to true
 $auth['only_admin_can_book'] = false;
 
+// This allows you to set a date (and time) before which only admins can make
+// bookings.  This is useful if you want to set a "go live" date and time for MRBS.
+// The variable should be set to a valid date/time format as described in
+// https://www.php.net/manual/en/datetime.formats.php.   For example set
+// $auth['only_admin_can_book_before'] = "2020-12-31 18:00";
+// if you want booking to go live at 6pm on 31 Dec 2020.
+// Note that $auth['only_admin_can_book_before'] will only be considered if
+// $auth['only_admin_can_book'] is false.
+$auth['only_admin_can_book_before'] = false;
+
 // If you want only administrators to be able to make repeat bookings,
 // set this variable to true
 $auth['only_admin_can_book_repeat'] = false;
@@ -1082,6 +1126,10 @@ $auth['only_admin_can_book_multiday'] = false;
 // on the booking form then set this to true.  (It doesn't stop ordinary users
 // making separate bookings for the same time slot, but it does slow them down).
 $auth['only_admin_can_select_multiroom'] = false;
+
+// Set this to true if you want to restrict the ability to use the "Copy" button on
+// the view_entry page to ordinary users viewing their own entries and to admins.
+$auth['only_admin_can_copy_others_entries'] = false;
 
 // If you don't want ordinary users to be able to see the other users'
 // details then set this to true.  (Only relevant when using 'db' authentication]
@@ -1099,8 +1147,12 @@ $auth['admin_can_only_book_for_self'] = false;
 $auth['admin_only_types'] = array();  // eg array('E');
 
 // If you want to prevent the public (ie un-logged in users) from
-// being able to view bookings, set this variable to true
+// being able to view bookings completely, set this variable to true
 $auth['deny_public_access'] = false;
+
+// Or else you can allow them to see that there is a booking, but the
+// details will be shown as private if you set this to true.
+$auth['force_private_for_guests'] = false;
 
 // Set to true if you want admins to be able to perform bulk deletions
 // on the Report page.  (It also only shows up if JavaScript is enabled)
@@ -1430,8 +1482,13 @@ $booking_types[] = "I";
 // still have a type associated with it in the database, which will be the default type.)
 // unset($booking_types);
 
-// Default short description for new bookings
+// Default brief description for new bookings
 $default_name = "";
+
+// Set this to true if you want the booking name (brief description) to
+// default to the current user's display name.  If set, this setting overrides
+// $default_name.
+$default_name_display_name = false;
 
 // Default long description for new bookings
 $default_description = "";
